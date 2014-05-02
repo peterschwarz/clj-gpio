@@ -25,9 +25,8 @@ public class NativePollEvent extends Structure {
 
     public NativePollEvent() {
         super();
-        this.setAlignType(Structure.ALIGN_NONE);
         events = 0;
-        data = new NativePollEventData();
+        data = new NativePollEventData(0);
     }
 
     protected List getFieldOrder() {
@@ -36,14 +35,13 @@ public class NativePollEvent extends Structure {
 
     @SuppressWarnings("UnusedDeclaration")
     public NativePollEvent(Pointer p) {
-        super(p, Structure.ALIGN_NONE);
+        super(p);
         read();
     }
 
     @SuppressWarnings("UnusedDeclaration")
     public NativePollEvent(int events, NativePollEventData data) {
         super();
-        this.setAlignType(Structure.ALIGN_NONE);
         this.events = events;
         this.data = data;
     }

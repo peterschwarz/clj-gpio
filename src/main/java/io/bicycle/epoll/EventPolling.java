@@ -71,9 +71,7 @@ public class EventPolling {
         @Override
         public void addFile(RandomAccessFile file, int flags) {
             int fd = nativeFd(file);
-            final NativePollEvent event = new NativePollEvent();
-            event.events = flags;
-            event.data.fd = fd;
+            final NativePollEvent event = new NativePollEvent(flags, new NativePollEventData(fd));
             event.write();
 
             if (epoll_ctl(epfd, EventPolling.EPOLL_CTL_ADD, fd, event.getPointer()) == -1) {
@@ -88,7 +86,7 @@ public class EventPolling {
             final FileFDTuple tuple = tupleFor(file);
             final NativePollEvent event = tuple.event;
             event.events = flags;
-            event.data.fd = tuple.fd;
+            event.write();
 
             if (epoll_ctl(epfd, EventPolling.EPOLL_CTL_MOD, tuple.fd, event.getPointer()) == -1) {
                 throw new RuntimeException("Unable to add to epoll set");
