@@ -1,9 +1,9 @@
 package io.bicycle;
 
 
-import io.bicycle.epoll.Epoll;
-import io.bicycle.epoll.EpollEvent;
-import io.bicycle.epoll.Epoller;
+import io.bicycle.epoll.EventPolling;
+import io.bicycle.epoll.EventPoller;
+import io.bicycle.epoll.PollEvent;
 
 import java.io.*;
 import java.util.List;
@@ -34,8 +34,8 @@ public class AppTest {
         System.out.println("Opening value file...");
         final RandomAccessFile f = new RandomAccessFile("/sys/class/gpio/gpio18/value", "rw");
 
-        final Epoller poller = Epoll.create();
-        poller.addFile(f, Epoll.EPOLLIN | Epoll.EPOLLET | Epoll.EPOLLPRI);
+        final EventPoller poller = EventPolling.create();
+        poller.addFile(f, EventPolling.EPOLLIN | EventPolling.EPOLLET | EventPolling.EPOLLPRI);
 
         System.out.println("Added epoll");
 
@@ -46,8 +46,8 @@ public class AppTest {
             @Override
             public void run() {
                 while (thread_running) {
-                    List<EpollEvent> events = poller.poll(-1);
-                    for (EpollEvent event : events) {
+                    List<PollEvent> events = poller.poll(-1);
+                    for (PollEvent event : events) {
                         System.out.println(event);
                         printFile(event.getFile());
                     }

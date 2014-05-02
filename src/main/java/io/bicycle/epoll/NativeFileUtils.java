@@ -3,7 +3,7 @@ package io.bicycle.epoll;
 import java.io.*;
 import java.lang.reflect.Field;
 
-public final class NativeFileUtils {
+final class NativeFileUtils {
  
     private static Field __fd;
     static {
@@ -23,7 +23,7 @@ public final class NativeFileUtils {
         }
     }
 
-    public static int getOutputFileHandle(File f) {
+/*    public static int getOutputFileHandle(File f) {
 
         try {
             return getFileHandle(new FileOutputStream(f).getFD());
@@ -38,6 +38,6 @@ public final class NativeFileUtils {
         } catch (IOException e) {
             return -1;
         }
-    }
+    }*/
 
 }

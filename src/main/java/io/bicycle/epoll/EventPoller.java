@@ -8,13 +8,13 @@ import java.util.List;
  * Date: 5/1/14
  * Time: 3:32 PM
  */
-public interface Epoller {
+public interface EventPoller {
 
     void addFile(RandomAccessFile file, int flags);
 
     void modifyFile(RandomAccessFile file, int flags);
 
-    List<EpollEvent> poll(int timeout);
+    List<PollEvent> poll(int timeout);
 
     void removeFile(RandomAccessFile file);
 

@@ -9,8 +9,8 @@ import java.util.Set;
  * Date: 5/1/14
  * Time: 3:41 PM
  */
-public final class EpollEvent {
-    private final Epoller source;
+public final class PollEvent {
+    private final EventPoller source;
     private final RandomAccessFile file;
     private final Set<Type> types;
 
@@ -30,40 +30,40 @@ public final class EpollEvent {
 
         static Set<Type> fromRawType(final int raw) {
             Set<Type> types = new HashSet<Type>();
-            if((raw & Epoll.EPOLLPRI) != 0) {
+            if((raw & EventPolling.EPOLLPRI) != 0) {
                 types.add(EPOLLPRI);
             }
-            if((raw & Epoll.EPOLLIN) != 0) {
+            if((raw & EventPolling.EPOLLIN) != 0) {
                 types.add(EPOLLIN);
             }
-            if((raw & Epoll.EPOLLOUT) != 0) {
+            if((raw & EventPolling.EPOLLOUT) != 0) {
                 types.add(EPOLLOUT);
             }
-            if((raw & Epoll.EPOLLRDNORM) != 0) {
+            if((raw & EventPolling.EPOLLRDNORM) != 0) {
                 types.add(EPOLLRDNORM);
             }
-            if((raw & Epoll.EPOLLRDBAND) != 0) {
+            if((raw & EventPolling.EPOLLRDBAND) != 0) {
                 types.add(EPOLLRDBAND);
             }
-            if((raw & Epoll.EPOLLWRNORM) != 0) {
+            if((raw & EventPolling.EPOLLWRNORM) != 0) {
                 types.add(EPOLLWRNORM);
             }
-            if((raw & Epoll.EPOLLWRBAND) != 0) {
+            if((raw & EventPolling.EPOLLWRBAND) != 0) {
                 types.add(EPOLLWRBAND);
             }
-            if((raw & Epoll.EPOLLMSG) != 0) {
+            if((raw & EventPolling.EPOLLMSG) != 0) {
                 types.add(EPOLLMSG);
             }
-            if((raw & Epoll.EPOLLERR) != 0) {
+            if((raw & EventPolling.EPOLLERR) != 0) {
                 types.add(EPOLLERR);
             }
-            if((raw & Epoll.EPOLLHUP) != 0) {
+            if((raw & EventPolling.EPOLLHUP) != 0) {
                 types.add(EPOLLHUP);
             }
-            if((raw & Epoll.EPOLLONESHOT) != 0) {
+            if((raw & EventPolling.EPOLLONESHOT) != 0) {
                 types.add(EPOLLONESHOT);
             }
-            if((raw & Epoll.EPOLLET) != 0) {
+            if((raw & EventPolling.EPOLLET) != 0) {
                 types.add(EPOLLET);
             }
             return types;
@@ -71,13 +71,13 @@ public final class EpollEvent {
     }
 
 
-    EpollEvent(Epoller source, RandomAccessFile file, Set<Type> types) {
+    PollEvent(EventPoller source, RandomAccessFile file, Set<Type> types) {
         this.source = source;
         this.file = file;
         this.types = types;
     }
 
-    public Epoller getSource() {
+    public EventPoller getSource() {
         return source;
     }
 
