@@ -53,7 +53,7 @@
 (defprotocol GpioChannelProvider
   (set-edge! [providor setting])
   (create-edge-channel [port] "Returns a core async channel on which events will be put")
-  (release-edge-channel [port channel]))
+  (release-edge-channel! [port channel]))
 
 (defn- read-high-low [raf]
   (.seek raf 0)
@@ -143,7 +143,7 @@
                              (tap mult-ch ch)
                              ch))
 
-      (release-edge-channel [_ ch]
+      (release-edge-channel! [_ ch]
                             (a/untap mult-ch ch)
                             (a/close! ch))
 
