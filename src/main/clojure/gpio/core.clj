@@ -118,7 +118,7 @@
 
     (go (loop []
           ; TODO: Let's use a timeout for more predictable shutdowns
-          (when-let [events (.poll poller 1000)]
+          (when-let [events (.poll poller -1)]
             (doseq [_ (filter #(=  gpio-port (.getData %)) events)]
               (>! read-ch (read-value gpio-port)))
             (recur))))
