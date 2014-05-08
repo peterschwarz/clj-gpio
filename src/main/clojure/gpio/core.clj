@@ -108,25 +108,27 @@
         read-ch (create-channel)
         mult-ch (a/mult read-ch)]
 
+    (.addFile poller (:file gpio-port) (bit-or EventPolling/EPOLLIN EventPolling/EPOLLET EventPolling/EPOLLPRI) gpio-port)
+
+    ; Serialize the write loop
     (go (loop []
           (when-let [data (<! write-ch)]
             (write-value! gpio-port data)
             (recur))))
 
     (go (loop []
-          (if-let [events (.poll poller -1)]
+          ; TODO: Let's use a timeout for more predictable shutdowns
+          (when-let [events (.poll poller 1000)]
             (doseq [_ (filter #(=  gpio-port (.getData %)) events)]
               (>! read-ch (read-value gpio-port)))
             (recur))))
 
-    (.addFile poller (:file gpio-port) (bit-or EventPolling/EPOLLIN EventPolling/EPOLLET EventPolling/EPOLLPRI) gpio-port)
 
     (reify
       GpioPort
 
       (set-direction! [_ direction] (set-direction! gpio-port direction))
       (set-active-low! [_ active-low?] (set-active-low! gpio-port active-low?))
-
       (read-value [_] (read-value gpio-port))
 
       (write-value! [this value] (>!! write-ch value))
