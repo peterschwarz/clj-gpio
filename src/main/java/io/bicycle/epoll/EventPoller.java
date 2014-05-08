@@ -12,7 +12,11 @@ public interface EventPoller {
 
     void addFile(RandomAccessFile file, int flags);
 
+    void addFile(RandomAccessFile file, int flags, Object data);
+
     void modifyFile(RandomAccessFile file, int flags);
+
+    void modifyFile(RandomAccessFile file, int flags, Object data);
 
     List<PollEvent> poll(int timeout);
 

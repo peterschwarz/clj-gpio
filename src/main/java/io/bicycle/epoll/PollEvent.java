@@ -13,6 +13,7 @@ public final class PollEvent {
     private final EventPoller source;
     private final RandomAccessFile file;
     private final Set<Type> types;
+    private final Object data;
 
     public enum Type {
         EPOLLIN,
@@ -71,10 +72,11 @@ public final class PollEvent {
     }
 
 
-    PollEvent(EventPoller source, RandomAccessFile file, Set<Type> types) {
+    PollEvent(EventPoller source, RandomAccessFile file, Set<Type> types, Object data) {
         this.source = source;
         this.file = file;
         this.types = types;
+        this.data = data;
     }
 
     public EventPoller getSource() {
@@ -87,6 +89,10 @@ public final class PollEvent {
 
     public Set<Type> getType() {
         return types;
+    }
+
+    public Object getData() {
+        return data;
     }
 
     @Override

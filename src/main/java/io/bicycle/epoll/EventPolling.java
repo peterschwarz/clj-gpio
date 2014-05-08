@@ -44,11 +44,13 @@ public class EventPolling {
         final RandomAccessFile file;
         final int fd;
         final NativePollEvent event;
+        private  Object data;
 
-        private FileFDTuple(RandomAccessFile file, int fd, NativePollEvent event) {
+        private FileFDTuple(RandomAccessFile file, int fd, NativePollEvent event, Object data) {
             this.file = file;
             this.fd = fd;
             this.event = event;
+            this.data = data;
         }
     }
 
@@ -70,6 +72,11 @@ public class EventPolling {
 
         @Override
         public void addFile(RandomAccessFile file, int flags) {
+            this.addFile(file, flags, null);
+        }
+
+        @Override
+        public void addFile(RandomAccessFile file, int flags, Object data) {
             int fd = nativeFd(file);
             final NativePollEvent event = new NativePollEvent(flags, new NativePollEventData(fd));
             event.write();
@@ -78,14 +85,20 @@ public class EventPolling {
                 throw new RuntimeException("Unable to add to epoll set");
             }
 
-            fileFDTuples.add(new FileFDTuple(file, fd, event));
+            fileFDTuples.add(new FileFDTuple(file, fd, event, data));
         }
 
         @Override
         public void modifyFile(RandomAccessFile file, int flags) {
+            modifyFile(file, flags, null);
+        }
+
+        @Override
+        public void modifyFile(RandomAccessFile file, int flags, Object data) {
             final FileFDTuple tuple = tupleFor(file);
             final NativePollEvent event = tuple.event;
             event.events = flags;
+            tuple.data = data;
             event.write();
 
             if (epoll_ctl(epfd, EventPolling.EPOLL_CTL_MOD, tuple.fd, event.getPointer()) == -1) {
@@ -119,9 +132,12 @@ public class EventPolling {
                 for (int i = 0; i < n; i++) {
                     this.events[i].read();
 
-                    System.out.println(this.events[i]);
+                    // System.out.println(this.events[i]);
                     final FileFDTuple tuple = tupleFor(this.events[i].data.fd);
-                    events.add(new PollEvent(this, tuple != null ? tuple.file : null, PollEvent.Type.fromRawType(this.events[0].events)));
+                    events.add(new PollEvent(this,
+                            tuple != null ? tuple.file : null,
+                            PollEvent.Type.fromRawType(this.events[0].events),
+                            tuple != null ? tuple.data : null));
                 }
 
                 return Collections.unmodifiableList(events);
