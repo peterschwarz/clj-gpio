@@ -4,31 +4,26 @@
            [java.nio.channels FileChannel FileChannel$MapMode]
            [io.bicycle.epoll EventPolling EventPoller PollEvent]))
 
-(defn write-to [file-name content]
-  (let [printStream (PrintStream. (FileOutputStream. file-name))]
-    (.print printStream content)
-    (.close printStream)))
-
 (defn export! [port]
-  (write-to "/sys/class/gpio/export", (str port)))
+  (spit "/sys/class/gpio/export", (str port)))
 
 (defn unexport! [port]
-  (write-to "/sys/class/gpio/unexport", (str port)))
+  (spit "/sys/class/gpio/unexport", (str port)))
 
 (defn- do-set-direction! [port direction]
   {:pre [(some #(= direction %) [:in :out 'in 'out "in" "out"])]}
-  (write-to (str "/sys/class/gpio/gpio" port "/direction") (name direction)))
+  (spit (str "/sys/class/gpio/gpio" port "/direction") (name direction)))
 
 (defn- do-set-edge! [port setting]
   {:pre [(some #(= setting %) [:none, :falling, :rising, :both,
                                'none, 'falling, 'rising, 'both
                                "none", "falling", "rising","both"])]}
 
-  (write-to (str "/sys/class/gpio/gpio" port "/edge") (name setting)))
+  (spit (str "/sys/class/gpio/gpio" port "/edge") (name setting)))
 
 
 (defn- do-set-active-low [port-num active-low?]
-  (write-to (str "/sys/class/gpio/gpio" port-num "/active_low") (if active-low? "1" "0")))
+  (spit (str "/sys/class/gpio/gpio" port-num "/active_low") (if active-low? "1" "0")))
 
 (defn- high-low-value [value]
   {:pre [(some #(= value %) [:high :low 1 0 'high 'low "1" "0" \1 \0])]}
@@ -66,12 +61,21 @@
 (defn- random-access [filename]
   (RandomAccessFile. filename "rw"))
 
-(defn open-port [port]
+(defn open-port
+  "Opens a port from which values may be read or written.
+  Args:
+  * port - the gpio pin number
+  * opts: a map of optional properts
+      * :from-raw-fn: a converter function, which takes the `char`
+          value (\1 or \0) read and converts it into a meaningful value.
+          The default converts the values to :high and :low respectively "
+  [port & opts]
   (export! port)
-  (let [filename (value-file port)
+  (let [{:keys [from-raw-fn]
+         :or {from-raw-fn #(if (= \1 %) :high :low)}} opts
+        filename (value-file port)
         raf (random-access filename)
-        props {:port port, :file-name filename, :file raf}
-        ]
+        props {:port port, :file-name filename, :file raf}]
     (reify
       clojure.lang.ILookup
 
@@ -87,7 +91,7 @@
       (read-value
        [_]
        (.seek raf 0)
-       (if (= \1 (char (.read raf))) :high :low))
+       (from-raw-fn (char (.read raf))))
 
       (write-value!
        [_ value]
@@ -99,10 +103,11 @@
               (.close raf)
               (unexport! port)))))
 
-(defn open-channel-port [port]
-  ; TODO: buffer size
-  (let [create-channel (fn [] (chan (sliding-buffer 1)))
-        gpio-port (open-port port)
+(defn open-channel-port
+  "Opens a port which can be used for listening to events which occur on the 0"
+  [port & opts]
+  (let [create-channel (fn [] (chan (sliding-buffer (:event-buffer-size opts))))
+        gpio-port (open-port port opts)
         poller (EventPolling/create)
         write-ch (chan 1)
         read-ch (create-channel)

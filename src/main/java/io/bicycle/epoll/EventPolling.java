@@ -33,7 +33,9 @@ public class EventPolling {
     }
 
     public static EventPoller create(int maxEvents) {
+        if(initializationError != null) throw new RuntimeException("Native library is unavailable!", initializationError);
         if (maxEvents < 1) throw new AssertionError("Need at least 1 event");
+        
         final int epfd = EventPolling.epoll_create(1);
 
         return new EventPollerImpl(epfd, maxEvents);
@@ -211,8 +213,14 @@ public class EventPolling {
 
     private static native int close(int fd);
 
+    private static UnsatisfiedLinkError initializationError = null;
+
     static {
+      try {
         Native.register(EventPolling.class, Platform.C_LIBRARY_NAME);
+      } catch (java.lang.UnsatisfiedLinkError e) {
+        initializationError = e;
+      }
     }
 
 }
