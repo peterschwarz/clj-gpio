@@ -4,5 +4,6 @@ target
 .idea
 
 .nrepl-port
-.lein-repl-history
-.lein-failures
+.lein-*
+
+*.sublime-*
