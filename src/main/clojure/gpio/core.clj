@@ -1,14 +1,14 @@
 (ns gpio.core
-  (:require [clojure.core.async :as a :refer [go <! >!! chan sliding-buffer tap]])
+  (:require [clojure.core.async :as a :refer [go <! >! >!! chan sliding-buffer tap]])
   (:import [java.io RandomAccessFile FileOutputStream PrintStream]
            [java.nio.channels FileChannel FileChannel$MapMode]
            [io.bicycle.epoll EventPolling EventPoller PollEvent]))
 
 (defn export! [port]
-  (spit "/sys/class/gpio/export", (str port)))
+  (spit "/sys/class/gpio/export" (str port)))
 
 (defn unexport! [port]
-  (spit "/sys/class/gpio/unexport", (str port)))
+  (spit "/sys/class/gpio/unexport" (str port)))
 
 (defn- do-set-direction! [port direction]
   {:pre [(some #(= direction %) [:in :out 'in 'out "in" "out"])]}
@@ -25,15 +25,17 @@
 (defn- do-set-active-low [port-num active-low?]
   (spit (str "/sys/class/gpio/gpio" port-num "/active_low") (if active-low? "1" "0")))
 
-(defn- high-low-value [value]
+(defn high-low-value [value]
   {:pre [(some #(= value %) [:high :low 1 0 'high 'low "1" "0" \1 \0])]}
   (byte (condp = value
           :high \1
           1     \1
           'high \1
+          "1"   \1
           :low  \0
           0     \0
           'low  \0
+          "0"   \0
           value)))
 
 (defprotocol Closeable
