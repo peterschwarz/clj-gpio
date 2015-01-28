@@ -6,7 +6,7 @@ A basic library for reading, writing and watching GPIO signals on a Raspberry pi
 
 Add the following to your `project.clj`
 
-    [clj-gpio 0.0.1-SNAPSHOT]
+    [clj-gpio 0.1.0-SNAPSHOT]
 
 Fire up a REPL, and require `gpio.core`.
 
