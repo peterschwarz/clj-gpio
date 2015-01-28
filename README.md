@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/peterschwarz/clj-gpio.svg)](https://travis-ci.org/peterschwarz/clj-gpio)
+
 # clj-gpio
 
 A basic library for reading, writing and watching GPIO signals on a Raspberry pi, in a REPL-friendly way. 
