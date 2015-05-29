@@ -1,5 +1,6 @@
 (ns gpio.core
-  (:require [clojure.core.async :as a :refer [go <! >! >!! chan sliding-buffer tap]])
+  (:require [clojure.core.async :as a :refer [go <! >! >!! chan sliding-buffer tap]]
+            [clojure.core.async.impl.protocols :as p])
   (:import [java.io RandomAccessFile FileOutputStream PrintStream]
            [java.nio.channels FileChannel FileChannel$MapMode]
            [io.bicycle.epoll EventPolling EventPoller PollEvent]))
@@ -113,6 +114,20 @@
 
 ))
 
+(defn- tap-and-wrap-chan [mult-ch out-ch]
+  (a/tap mult-ch out-ch)
+  (reify 
+    p/Channel
+    (p/close! [_]
+      (a/untap mult-ch out-ch)
+      (a/close! out-ch))
+    (p/closed? [_]
+      (p/closed? out-ch))
+
+    p/ReadPort
+    (p/take! [_ fn1-handler]
+      (p/take! out-ch fn1-handler))))
+
 (defn open-channel-port
   "Opens a port which can be used for listening to value changes.  In addition to the
   options map for a basic port, the following are available:
@@ -161,14 +176,7 @@
       (set-edge! [_ setting]
                  (do-set-edge! port setting))
 
-      (create-edge-channel [_]
-                           (let [ch (create-channel)]
-                             (tap mult-ch ch)
-                             ch))
-
-      (release-edge-channel! [_ ch]
-                            (a/untap mult-ch ch)
-                            (a/close! ch))
+      (create-edge-channel [_] (tap-and-wrap-chan mult-ch (create-channel)))
 
       Closeable
       (close! [_]
