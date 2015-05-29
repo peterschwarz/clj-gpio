@@ -116,7 +116,7 @@
 
 (defn- tap-and-wrap-chan [mult-ch out-ch]
   (a/tap mult-ch out-ch)
-  (reify 
+  (reify
     p/Channel
     (p/close! [_]
       (a/untap mult-ch out-ch)
@@ -127,6 +127,9 @@
     p/ReadPort
     (p/take! [_ fn1-handler]
       (p/take! out-ch fn1-handler))))
+
+(def ^:private POLLING_CONFIG
+  (bit-or EventPolling/EPOLLIN EventPolling/EPOLLET EventPolling/EPOLLPRI))
 
 (defn open-channel-port
   "Opens a port which can be used for listening to value changes.  In addition to the
@@ -144,7 +147,7 @@
         read-ch (create-channel)
         mult-ch (a/mult read-ch)]
 
-    (.addFile poller (:file gpio-port) (bit-or EventPolling/EPOLLIN EventPolling/EPOLLET EventPolling/EPOLLPRI) gpio-port)
+    (.addFile poller (:file gpio-port) POLLING_CONFIG gpio-port)
 
     (when edge (do-set-edge! port edge))
 
