@@ -61,7 +61,7 @@ Let's turn on the LED we defined in the Read/Write example above when our button
 
 When we're finished with the channel, we call:
 
-     (release-edge-channel! ch-port ch)
+     user=> (a/close! ch)
      nil
 
 And clean up our ports:
