@@ -39,6 +39,41 @@
           "0"   \0
           value)))
 
+(defn- do-format 
+  [raw-value high low]
+  (if  (= \1 raw-value) high low))
+
+(defmulti format-raw-digital 
+  "Formats the raw values received from digital reads of pin state,
+      or digital events.
+      
+        The type specified is a keyword."
+  (fn [type _] type))
+
+(defmethod format-raw-digital :keyword 
+  [_ raw-value]
+  (do-format raw-value :high :low))
+
+(defmethod format-raw-digital :boolean
+  [_ raw-value]
+  (= \1 raw-value))
+
+(defmethod format-raw-digital :symbol
+  [_ raw-value]
+  (do-format raw-value 'high 'low))
+
+(defmethod format-raw-digital :integer
+  [_ raw-value]
+  (do-format raw-value 1 0))
+
+(defmethod format-raw-digital :char
+  [_ raw-value]
+  raw-value)
+
+(defmethod format-raw-digital :default
+  [_ raw-value]
+  raw-value)
+
 (defprotocol Closeable
   (close! [self] "Closes this object"))
 
@@ -67,42 +102,46 @@
       * :direction - sets the initial direction
       * :active-low? - sets the port as \"active low\", value true or false
       * :initial-value - sets the intitial value of the pin.
+      * :digital-result-format - describes the format for digital values on read
+          This can be one of #{:keyword :symbol }
       * :from-raw-fn - a converter function, which takes the `char`
           value (\1 or \0) read and converts it into a meaningful value.
-          The default converts the values to :high and :low respectively "
+          Overrides the default formatter"
   [port & [opts]]
   (export! port)
-  (let [{:keys [from-raw-fn direction active-low? initial-value]
-         :or {from-raw-fn #(if (= \1 %) :high :low)}} opts
+  (let [{:keys [digital-result-format from-raw-fn direction active-low? initial-value]
+         :or {digital-result-format :keyword}} opts
+        _ (println digital-result-format)
+        formatter (or from-raw-fn (partial format-raw-digital digital-result-format))
         filename (value-file port)
         raf (random-access filename)
         props {:port port, :file-name filename, :file raf}
         gpio-port (reify
-                   clojure.lang.ILookup
+                    clojure.lang.ILookup
 
-                   (valAt [_ k not-found] (get props k not-found))
-                   (valAt [_ k] (k props))
+                    (valAt [_ k not-found] (get props k not-found))
+                    (valAt [_ k] (k props))
 
-                   GpioPort
+                    GpioPort
 
-                   (set-direction! [_ direction] (do-set-direction! port direction))
+                    (set-direction! [_ direction] (do-set-direction! port direction))
 
-                   (set-active-low! [_ active-low?] (do-set-active-low port active-low?))
+                    (set-active-low! [_ active-low?] (do-set-active-low port active-low?))
 
-                   (read-value
-                    [_]
-                    (.seek raf 0)
-                    (from-raw-fn (char (.read raf))))
+                    (read-value
+                      [_]
+                      (.seek raf 0)
+                      (formatter (char (.read raf))))
 
-                   (write-value!
-                    [_ value]
-                    (.seek raf 0)
-                    (.writeByte raf (high-low-value value)))
+                    (write-value!
+                      [_ value]
+                      (.seek raf 0)
+                      (.writeByte raf (high-low-value value)))
 
-                   Closeable
-                   (close! [_]
-                           (.close raf)
-                           (unexport! port)))]
+                    Closeable
+                    (close! [_]
+                      (.close raf)
+                      (unexport! port)))]
     (try
       (when direction (set-direction! gpio-port direction))
       (when active-low? (set-active-low! gpio-port active-low?))
@@ -110,9 +149,7 @@
       gpio-port
       (catch Exception e
         (close! gpio-port)
-        (throw e)))
-
-))
+        (throw e)))))
 
 (defn- tap-and-wrap-chan [mult-ch out-ch]
   (a/tap mult-ch out-ch)
@@ -133,7 +170,7 @@
 
 (defn open-channel-port
   "Opens a port which can be used for listening to value changes.  In addition to the
-  options map for a basic port, the following are available:
+  options map for [[open-port]], the following are available:
   * :event-buffer-size - the size of the change events buffer.  Defaults to 1
   * :timeout - sets a timeout for the OS polling wait time.  Defaults to -1, which waits indefinitely
   * :edge - sets the edge value- :rising, :falling, or :both"
@@ -177,13 +214,13 @@
       GpioChannelProvider
 
       (set-edge! [_ setting]
-                 (do-set-edge! port setting))
+        (do-set-edge! port setting))
 
       (create-edge-channel [_] (tap-and-wrap-chan mult-ch (create-channel)))
 
       Closeable
       (close! [_]
-              (a/close! write-ch)
-              (a/close! read-ch)
-              (.close poller)
-              (close! gpio-port)))))
+        (a/close! write-ch)
+        (a/close! read-ch)
+        (.close poller)
+        (close! gpio-port)))))
