@@ -81,11 +81,11 @@
   (set-direction! [port direction] "Sets the direction of this port: in or out.")
   (set-active-low! [port active-low?] "Invert the logic of the value pin for both reading and writing so that a high == 0 and low == 1. ")
   (read-value [port] "Return the value of the port")
-  (write-value! [port value] "Writes the value to the port.  The value may be specified as :high, :low (and symbol or string variations), \1, \0, or 1, 0"))
+  (write-value! [port value] "Writes the value to the port.  The value may be specified as `:high`, `:low` (and symbol or string variations), \1, \0, or 1, 0"))
 
 (defprotocol GpioChannelProvider
   (set-edge! [providor setting])
-  (create-edge-channel [port] "Returns a core async channel on which events will be put")
+  (create-edge-channel [port] "Returns a core.async channel on which events will be put")
   (release-edge-channel! [port channel]))
 
 (defn- value-file [port]
@@ -97,14 +97,14 @@
 (defn open-port
   "Opens a port from which values may be read or written.
   Args:
-  * port - the gpio pin number
-  * opts: a map of optional properts
-      * :direction - sets the initial direction
-      * :active-low? - sets the port as \"active low\", value true or false
-      * :initial-value - sets the intitial value of the pin.
-      * :digital-result-format - describes the format for digital values on read
-          This can be one of #{:keyword :symbol }
-      * :from-raw-fn - a converter function, which takes the `char`
+  * `port` - the gpio pin number
+  * opts: optional keyword args
+      * `:direction` - sets the initial direction
+      * `:active-low?` - sets the port as \"active low\", value true or false
+      * `:initial-value` - sets the intitial value of the pin.
+      * `:digital-result-format` - describes the format for digital values on read
+          This can be one of `#{:keyword :symbol :integer :boolean :char}`
+      * `:from-raw-fn` - a converter function, which takes the `char`
           value (\1 or \0) read and converts it into a meaningful value.
           Overrides the default formatter"
   [port & opts]
@@ -170,9 +170,9 @@
 (defn open-channel-port
   "Opens a port which can be used for listening to value changes.  In addition to the
   options map for [[open-port]], the following are available:
-  * :event-buffer-size - the size of the change events buffer.  Defaults to 1
-  * :timeout - sets a timeout for the OS polling wait time.  Defaults to -1, which waits indefinitely
-  * :edge - sets the edge value- :rising, :falling, or :both"
+  * `:event-buffer-size` - the size of the change events buffer.  Defaults to 1
+  * `:timeout` - sets a timeout for the OS polling wait time.  Defaults to -1, which waits indefinitely
+  * `:edge` - sets the edge value- `:rising`, `:falling`, or `:both`"
   [port & opts]
   (let [{:keys [event-buffer-size timeout edge]
          :or {event-buffer-size 1, timeout -1}} opts
