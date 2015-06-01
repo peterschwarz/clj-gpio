@@ -45,9 +45,9 @@
 
 (defmulti format-raw-digital 
   "Formats the raw values received from digital reads of pin state,
-      or digital events.
+   or digital events.
       
-        The type specified is a keyword."
+   The type specified is a keyword."
   (fn [type _] type))
 
 (defmethod format-raw-digital :keyword 
@@ -107,11 +107,10 @@
       * :from-raw-fn - a converter function, which takes the `char`
           value (\1 or \0) read and converts it into a meaningful value.
           Overrides the default formatter"
-  [port & [opts]]
+  [port & opts]
   (export! port)
   (let [{:keys [digital-result-format from-raw-fn direction active-low? initial-value]
          :or {digital-result-format :keyword}} opts
-        _ (println digital-result-format)
         formatter (or from-raw-fn (partial format-raw-digital digital-result-format))
         filename (value-file port)
         raf (random-access filename)
@@ -174,11 +173,11 @@
   * :event-buffer-size - the size of the change events buffer.  Defaults to 1
   * :timeout - sets a timeout for the OS polling wait time.  Defaults to -1, which waits indefinitely
   * :edge - sets the edge value- :rising, :falling, or :both"
-  [port & [opts]]
+  [port & opts]
   (let [{:keys [event-buffer-size timeout edge]
          :or {event-buffer-size 1, timeout -1}} opts
         create-channel (fn [] (chan (sliding-buffer event-buffer-size)))
-        gpio-port (open-port port opts)
+        gpio-port (apply open-port port opts)
         poller (EventPolling/create)
         write-ch (chan 1)
         read-ch (create-channel)
