@@ -1,5 +1,6 @@
 (ns gpio.core
-  (:require [clojure.core.async :as a :refer [go <! >! >!! chan sliding-buffer tap]]
+  (:require [clojure.core.async :as a 
+             :refer [go <! >! >!! chan sliding-buffer tap]]
             [clojure.core.async.impl.protocols :as p])
   (:import [java.io RandomAccessFile FileOutputStream PrintStream]
            [java.nio.channels FileChannel FileChannel$MapMode]
@@ -91,7 +92,7 @@
 (defn- value-file [port]
   (str "/sys/class/gpio/gpio" port "/value"))
 
-(defn- random-access [filename]
+(defn random-access [filename]
   (RandomAccessFile. filename "rw"))
 
 (defn open-port
@@ -111,7 +112,8 @@
   (export! port)
   (let [{:keys [digital-result-format from-raw-fn direction active-low? initial-value]
          :or {digital-result-format :keyword}} opts
-        formatter (or from-raw-fn (partial format-raw-digital digital-result-format))
+        formatter (or from-raw-fn
+                      (partial format-raw-digital digital-result-format))
         filename (value-file port)
         raf (random-access filename)
         props {:port port, :file-name filename, :file raf}
@@ -123,9 +125,11 @@
 
                     GpioPort
 
-                    (set-direction! [_ direction] (do-set-direction! port direction))
+                    (set-direction! [_ direction]
+                      (do-set-direction! port direction))
 
-                    (set-active-low! [_ active-low?] (do-set-active-low port active-low?))
+                    (set-active-low! [_ active-low?]
+                      (do-set-active-low port active-low?))
 
                     (read-value
                       [_]
