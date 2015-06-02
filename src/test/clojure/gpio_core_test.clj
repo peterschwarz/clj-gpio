@@ -53,6 +53,28 @@
     (write-value! port :low)
     (is (= false (read-value port)))))
 
+(deftest test-read-integer
+  (spit "/sys/class/gpio/gpio2/value" \1)
+  (let [port (open-port 2 :digital-result-format :integer)]
+    (is (= 1 (read-value port)))
+    (write-value! port :low)
+    (is (= 0 (read-value port)))))
+
+(deftest test-read-char
+  (spit "/sys/class/gpio/gpio2/value" \1)
+  (let [port (open-port 2 :digital-result-format :char)]
+    (is (= \1 (read-value port)))
+    (write-value! port :low)
+ 
+(deftest test-read-custom
+  (spit "/sys/class/gpio/gpio2/value" \1)
+  (let [port (open-port 2 :from-raw-fn #(if (= \1 %) :foo :bar))]
+    (is (= :foo (read-value port)))
+    (write-value! port :low)
+    (is (= :bar (read-value port)))))
+
+   (is (= \0 (read-value port)))))
+
 (deftest test-set-direction
   (spit "/sys/class/gpio/gpio19/value" \0)
   (let [port (open-port 19)]
