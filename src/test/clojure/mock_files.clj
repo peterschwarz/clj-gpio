@@ -14,16 +14,16 @@
 (defn- in-parent [parent filename]
   (file parent (subs filename 1)))
 
-(defn spitp [spit-fn parent filename content]
+(defn- spitp [spit-fn parent filename content]
   (let [f (in-parent parent filename)]
     (-> (.getParentFile f)
         (.mkdirs))
     (spit-fn f content)))
 
-(defn slurpp [slurp-fn parent filename]
+(defn- slurpp [slurp-fn parent filename]
     (slurp-fn (in-parent parent filename)))
 
-(defn random-accessp [random-access-fn parent filename]
+(defn- random-accessp [random-access-fn parent filename]
   (random-access-fn (in-parent parent filename)))
 
 

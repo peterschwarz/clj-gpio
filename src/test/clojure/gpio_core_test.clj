@@ -1,6 +1,6 @@
 (ns gpio-core-test
   (:require [clojure.test :refer :all]
-            [file-utils :refer :all]
+            [mock-files :refer :all]
             [gpio.core :refer :all]))
 
 (deftest test-high-low-value
@@ -38,6 +38,20 @@
     (is (= :low (read-value port)))
     (write-value! port :high)
     (is (= "1" (slurp "/sys/class/gpio/gpio17/value")))))
+
+(deftest test-read-symbol
+  (spit "/sys/class/gpio/gpio2/value" \1)
+  (let [port (open-port 2 :digital-result-format :symbol)]
+    (is (= 'high (read-value port)))
+    (write-value! port :low)
+    (is (= 'low (read-value port)))))
+
+(deftest test-read-boolean
+  (spit "/sys/class/gpio/gpio2/value" \1)
+  (let [port (open-port 2 :digital-result-format :boolean)]
+    (is (= true (read-value port)))
+    (write-value! port :low)
+    (is (= false (read-value port)))))
 
 (deftest test-set-direction
   (spit "/sys/class/gpio/gpio19/value" \0)
