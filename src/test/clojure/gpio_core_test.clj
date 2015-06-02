@@ -1,6 +1,6 @@
 (ns gpio-core-test
   (:require [clojure.test :refer :all]
-            [clojure.java.io :refer :all]
+            [file-utils :refer :all]
             [gpio.core :refer :all]))
 
 (deftest test-high-low-value
@@ -22,47 +22,38 @@
     (is (thrown? AssertionError (high-low-value 3)))
     (is (thrown? AssertionError (high-low-value :foo)))))
 
-(defn- in-parent [parent filename]
-  (file parent (subs filename 1)))
-
-(defn spitp [spit-fn parent filename content]
-  (let [f (in-parent parent filename)]
-    (-> (.getParentFile f)
-        (.mkdirs))
-    (spit-fn f content)))
-
-(defn slurpp [slurp-fn parent filename]
-    (slurp-fn (in-parent parent filename)))
-
-(defn random-accessp [random-access-fn parent filename]
-  (random-access-fn (in-parent parent filename)))
-
-(defmacro with-mock-files [& body]
-  `(let [test-dir# (as-file "target/test-files")
-         exists-or-created# (or (.exists test-dir#) (.mkdirs test-dir#))]
-    (assert exists-or-created# "unable to create test directory")
-
-    (let [orig-spit# spit
-          orig-slurp# slurp
-          orig-random-access# random-access]
-      (with-redefs [spit (partial spitp orig-spit# test-dir#)
-                    slurp (partial slurpp orig-slurp# test-dir#)
-                    random-access (partial random-accessp orig-random-access# test-dir#)]
-        ~@body))))
+(use-fixtures :each mock-file-fixture)
 
 (deftest test-export
-  (with-mock-files
-    (export! 17)
-    (is (= "17" (slurp "/sys/class/gpio/export")))))
+  (export! 17)
+  (is (= "17" (slurp "/sys/class/gpio/export"))))
 
 (deftest test-unexport
-  (with-mock-files
-    (unexport! 18)
-    (is (= "18" (slurp "/sys/class/gpio/unexport")))))
+  (unexport! 18)
+  (is (= "18" (slurp "/sys/class/gpio/unexport"))))
 
 (deftest test-open-port
-  (with-mock-files
-    (spit "/sys/class/gpio/gpio17/value" \0)
-    (let [port (open-port 17)]
-      (is (= :low (read-value port)))
-      )))
+  (spit "/sys/class/gpio/gpio17/value" \0)
+  (let [port (open-port 17)]
+    (is (= :low (read-value port)))
+    (write-value! port :high)
+    (is (= "1" (slurp "/sys/class/gpio/gpio17/value")))))
+
+(deftest test-set-direction
+  (spit "/sys/class/gpio/gpio19/value" \0)
+  (let [port (open-port 19)]
+    (set-direction! port :in)
+    (is (= "in" (slurp "/sys/class/gpio/gpio19/direction")))))
+
+(deftest test-set-active-low
+  (spit "/sys/class/gpio/gpio21/value" \0)
+  (let [port (open-port 21)]
+    (set-active-low! port true)
+    (is (= "1" (slurp "/sys/class/gpio/gpio21/active_low")))))
+
+; Needs a platform-independent method for file watching
+#_(deftest test-open-channel-port
+  (spit "/sys/class/gpio/gpio1/value" \0)
+  (let [port (open-channel-port 1)]
+    (set-edge! port :rising)
+    (is (= "rising" (slurp "/sys/class/gpio/gpio1/edge")))))
