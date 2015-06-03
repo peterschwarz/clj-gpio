@@ -9,7 +9,7 @@ Pi, in a Clojure REPL-friendly way.
 
 Add the following to your `project.clj`
 
-    [clj-gpio 0.1.0]
+    [clj-gpio 0.1.1-SNAPSHOT]
 
 Fire up a REPL, and require `gpio.core`.
 
