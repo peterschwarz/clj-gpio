@@ -24,7 +24,7 @@
   (spit (str "/sys/class/gpio/gpio" port "/edge") (name setting)))
 
 
-(defn- do-set-active-low [port-num active-low?]
+(defn- do-set-active-low! [port-num active-low?]
   (spit (str "/sys/class/gpio/gpio" port-num "/active_low") (if active-low? "1" "0")))
 
 (defn high-low-value [value]
@@ -44,7 +44,7 @@
 
 (defn- do-format 
   [raw-value high low]
-  (if  (= \1 raw-value) high low))
+  (if (= \1 raw-value) high low))
 
 (defmulti format-raw-digital 
   "Formats the raw values received from digital reads of pin state,
@@ -97,6 +97,33 @@
 (defn random-access [filename]
   (RandomAccessFile. filename "rw"))
 
+(defrecord BasicGpioPort [port filename file formatter]
+  GpioPort
+
+  (set-direction! [_ direction]
+    (do-set-direction! port direction))
+
+  (set-active-low! [_ active-low?]
+    (do-set-active-low! port active-low?))
+
+  (read-value
+    [_]
+    (.seek file 0)
+    (formatter (char (.read file))))
+
+  (write-value!
+    [_ value]
+    (.seek file 0)
+    (.writeByte file (high-low-value value)))
+
+  clojure.lang.IDeref
+  (deref [this] (read-value this))
+
+  Closeable
+  (close! [_]
+    (.close file)
+    (unexport! port)))
+
 (defn open-port
   "Opens a port from which values may be read or written.
   Args:
@@ -118,35 +145,7 @@
                       (partial format-raw-digital digital-result-format))
         filename (value-file port)
         raf (random-access filename)
-        props {:port port, :file-name filename, :file raf}
-        gpio-port (reify
-                    clojure.lang.ILookup
-
-                    (valAt [_ k not-found] (get props k not-found))
-                    (valAt [_ k] (k props))
-
-                    GpioPort
-
-                    (set-direction! [_ direction]
-                      (do-set-direction! port direction))
-
-                    (set-active-low! [_ active-low?]
-                      (do-set-active-low port active-low?))
-
-                    (read-value
-                      [_]
-                      (.seek raf 0)
-                      (formatter (char (.read raf))))
-
-                    (write-value!
-                      [_ value]
-                      (.seek raf 0)
-                      (.writeByte raf (high-low-value value)))
-
-                    Closeable
-                    (close! [_]
-                      (.close raf)
-                      (unexport! port)))]
+        gpio-port (BasicGpioPort. port filename raf formatter)]
     (try
       (when direction (set-direction! gpio-port direction))
       (when active-low? (set-active-low! gpio-port active-low?))
@@ -172,6 +171,33 @@
 
 (def ^:private POLLING_CONFIG
   (bit-or EventPolling/EPOLLIN EventPolling/EPOLLET EventPolling/EPOLLPRI))
+
+(defrecord EdgeGpioPort [port gpio-port event-poller read-ch write-ch mult-ch chan-factory-fn]
+  
+  GpioPort
+
+  (set-direction! [_ direction] (set-direction! gpio-port direction))
+  (set-active-low! [_ active-low?] (set-active-low! gpio-port active-low?))
+  (read-value [_] (read-value gpio-port))
+
+  (write-value! [this value] (>!! write-ch value))
+
+  GpioChannelProvider
+
+  (set-edge! [_ setting]
+    (do-set-edge! port setting))
+
+  (create-edge-channel [_] (tap-and-wrap-chan mult-ch (chan-factory-fn)))
+
+  clojure.lang.IDeref
+  (deref [this] (read-value this))
+
+  Closeable
+  (close! [_]
+    (a/close! write-ch)
+    (a/close! read-ch)
+    (.close event-poller)
+    (close! gpio-port)))
 
 (defn open-channel-port
   "Opens a port which can be used for listening to value changes.  In addition to the
@@ -200,32 +226,9 @@
             (recur))))
 
     (go (loop []
-          ; TODO: Let's use a timeout for more predictable shutdowns
           (when-let [events (.poll poller timeout)]
             (doseq [_ (filter #(=  gpio-port (.getData %)) events)]
               (>! read-ch (read-value gpio-port)))
             (recur))))
 
-
-    (reify
-      GpioPort
-
-      (set-direction! [_ direction] (set-direction! gpio-port direction))
-      (set-active-low! [_ active-low?] (set-active-low! gpio-port active-low?))
-      (read-value [_] (read-value gpio-port))
-
-      (write-value! [this value] (>!! write-ch value))
-
-      GpioChannelProvider
-
-      (set-edge! [_ setting]
-        (do-set-edge! port setting))
-
-      (create-edge-channel [_] (tap-and-wrap-chan mult-ch (create-channel)))
-
-      Closeable
-      (close! [_]
-        (a/close! write-ch)
-        (a/close! read-ch)
-        (.close poller)
-        (close! gpio-port)))))
+    (EdgeGpioPort. port gpio-port poller read-ch write-ch mult-ch create-channel)))

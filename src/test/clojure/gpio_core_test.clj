@@ -76,6 +76,13 @@
     (write-value! port :low)
     (is (= :bar (read-value port)))))
 
+(deftest test-read-deref
+  (spit "/sys/class/gpio/gpio17/value" \0)
+  (let [port (open-port 17)]
+    (is (= :low @port))
+    (write-value! port :high)
+    (is (= :high  @port))))
+
 (deftest test-write-keyword
   (spit "/sys/class/gpio/gpio17/value" \0)
   (let [port (open-port 17)]
