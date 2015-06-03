@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>clj-gpio by peterschwarz</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>clj-gpio</h1>
+        <p>A basic library for reading, writing and watching GPIO signals on a Raspberry PI, in a Clojure REPL-friendly way.</p>
+
+        <p class="view"><a href="https://github.com/peterschwarz/clj-gpio">View the Project on GitHub <small>peterschwarz/clj-gpio</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/peterschwarz/clj-gpio/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/peterschwarz/clj-gpio/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/peterschwarz/clj-gpio">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <p><a href="https://travis-ci.org/peterschwarz/clj-gpio"><img src="https://travis-ci.org/peterschwarz/clj-gpio.svg" alt="Build Status"></a></p>
+
+<h1>
+<a id="clj-gpio" class="anchor" href="#clj-gpio" aria-hidden="true"><span class="octicon octicon-link"></span></a>clj-gpio</h1>
+
+<p>A basic library for reading, writing and watching GPIO signals on a Raspberry
+Pi, in a Clojure REPL-friendly way.</p>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>Add the following to your <code>project.clj</code></p>
+
+<pre><code>[clj-gpio 0.1.0]
+</code></pre>
+
+<p>Fire up a REPL, and require <code>gpio.core</code>.</p>
+
+<h3>
+<a id="gpio-readwrite" class="anchor" href="#gpio-readwrite" aria-hidden="true"><span class="octicon octicon-link"></span></a>GPIO Read/Write</h3>
+
+<p>We can open a basic read/write GPIO port as follows (let's say we have an LED
+conncted to GPIO 17):</p>
+
+<pre><code>user=&gt; (require '[gpio.core :refer :all] :reload)
+nil
+user=&gt; (def port (open-port 17))
+#'user/port
+</code></pre>
+
+<p>To read the value of the port, we can do the following:</p>
+
+<pre><code>user=&gt; (read-value port)
+:low
+</code></pre>
+
+<p>Or, more conveniently, we can deref it:</p>
+
+<pre><code>user=&gt; @port
+:low
+</code></pre>
+
+<p>To set values on the port, The port needs to be configured for <code>out</code> mode:</p>
+
+<pre><code>user=&gt; (set-direction! port :out)
+</code></pre>
+
+<p>This also works with <code>'out</code> and <code>"out"</code>.  A value can be written to the port
+as follows:</p>
+
+<pre><code>user=&gt; (write-value! port :high)
+</code></pre>
+
+<p>With our LED connected to GPIO 17, we should see it turned on.  We can also
+read back the value and see that <code>(= :high @port)</code>.</p>
+
+<h3>
+<a id="gpio-listening" class="anchor" href="#gpio-listening" aria-hidden="true"><span class="octicon octicon-link"></span></a>GPIO Listening.</h3>
+
+<p>We can also pull events off of a GPIO port by using <code>open-channel-port</code>.  In
+addition to setting directions, values etc, we set the edge change that we'll
+listen for, and we can create a <code>core.async</code> channel from which can receive
+values. </p>
+
+<p>For example (if we have a push button on GPIO 18):</p>
+
+<pre><code>user=&gt; (def ch-port (open-channel-port 18))
+#'user/ch-port
+user=&gt; (set-direction! ch-port :in)
+nil
+user=&gt; (set-edge! ch-port :both) ; or :falling, :rising, and :none to disable 
+nil
+</code></pre>
+
+<p>We'll also set the bit to :high when the button pressed:</p>
+
+<pre><code>user=&gt; (set-active-low! ch-port true) 
+nil
+</code></pre>
+
+<p>Let's turn on the LED we defined in the Read/Write example above when our
+button is pressed: </p>
+
+<pre><code>user=&gt; (def ch (create-edge-channel ch-port))
+#'user/ch
+user=&gt;  (require '[clojure.core.async :as a :refer [go &lt;!]])
+nil
+user=&gt; (go (loop []
+         (when-let [value (&lt;! ch)]
+            (write-value! port value)
+            (recur))))
+#&lt;ManyToManyChannel clojure.core.async.impl.channels.ManyToManyChannel@1197ad0&gt;
+</code></pre>
+
+<p>When we're finished with the channel, we call:</p>
+
+<pre><code> user=&gt; (a/close! ch)
+ nil
+</code></pre>
+
+<p>And clean up our ports:</p>
+
+<pre><code>user=&gt; (close! port)
+nil
+user=&gt; (close! ch-port)
+nil
+</code></pre>
+
+<h2>
+<a id="development" class="anchor" href="#development" aria-hidden="true"><span class="octicon octicon-link"></span></a>Development</h2>
+
+<p>First compile the java sources:</p>
+
+<pre><code>lein javac
+</code></pre>
+
+<p>then fire up your REPL and require <code>gpio.core</code> as usual.</p>
+
+<p>Note, the edge channel will only operate on the Raspberry PI platform.</p>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h2>
+
+<p>Copyright © 2014 Peter Schwarz</p>
+
+<p>Distributed under the Eclipse Public License, the same as Clojure.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/peterschwarz">peterschwarz</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
