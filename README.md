@@ -2,7 +2,8 @@
 
 # clj-gpio
 
-A basic library for reading, writing and watching GPIO signals on a Raspberry pi, in a REPL-friendly way. 
+A basic library for reading, writing and watching GPIO signals on a Raspberry
+Pi, in a Clojure REPL-friendly way.
 
 ## Usage
 
