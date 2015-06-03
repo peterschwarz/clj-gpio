@@ -28,16 +28,18 @@
   (spit (str "/sys/class/gpio/gpio" port-num "/active_low") (if active-low? "1" "0")))
 
 (defn high-low-value [value]
-  {:pre [(some #(= value %) [:high :low 1 0 'high 'low "1" "0" \1 \0])]}
+  {:pre [(not (nil? (#{:high :low 1 0 'high 'low true false "1" "0" \1 \0} value)))]}
   (byte (condp = value
           :high \1
           1     \1
           'high \1
           "1"   \1
+          true  \1
           :low  \0
           0     \0
           'low  \0
           "0"   \0
+          false \0
           value)))
 
 (defn- do-format 

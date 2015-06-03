@@ -9,14 +9,16 @@
     (is (= (byte \1) (high-low-value 'high)))
     (is (= (byte \1) (high-low-value 1)))
     (is (= (byte \1) (high-low-value "1")))
-    (is (= (byte \1) (high-low-value \1))))
+    (is (= (byte \1) (high-low-value \1)))
+    (is (= (byte \1) (high-low-value true))))
 
   (testing "low"
     (is (= (byte \0) (high-low-value :low)))
     (is (= (byte \0) (high-low-value 'low)))
     (is (= (byte \0) (high-low-value 0)))
     (is (= (byte \0) (high-low-value "0")))
-    (is (= (byte \0) (high-low-value \0))))
+    (is (= (byte \0) (high-low-value \0)))
+    (is (= (byte \0) (high-low-value false))))
 
   (testing "invalid values"
     (is (thrown? AssertionError (high-low-value 3)))
@@ -73,7 +75,55 @@
     (is (= :foo (read-value port)))
     (write-value! port :low)
     (is (= :bar (read-value port)))))
+
+(deftest test-write-keyword
+  (spit "/sys/class/gpio/gpio17/value" \0)
+  (let [port (open-port 17)]
+    (write-value! port :high)
+    (is (= "1" (slurp "/sys/class/gpio/gpio17/value")))
+    (write-value! port :low)
+    (is (= "0" (slurp "/sys/class/gpio/gpio17/value")))))
  
+(deftest test-write-symbol
+  (spit "/sys/class/gpio/gpio17/value" \0)
+  (let [port (open-port 17)]
+    (write-value! port 'high)
+    (is (= "1" (slurp "/sys/class/gpio/gpio17/value")))
+    (write-value! port 'low)
+    (is (= "0" (slurp "/sys/class/gpio/gpio17/value")))))
+
+(deftest test-write-character
+  (spit "/sys/class/gpio/gpio17/value" \0)
+  (let [port (open-port 17)]
+    (write-value! port \1)
+    (is (= "1" (slurp "/sys/class/gpio/gpio17/value")))
+    (write-value! port \0)
+    (is (= "0" (slurp "/sys/class/gpio/gpio17/value")))))
+
+(deftest test-write-integer
+  (spit "/sys/class/gpio/gpio17/value" \0)
+  (let [port (open-port 17)]
+    (write-value! port 1)
+    (is (= "1" (slurp "/sys/class/gpio/gpio17/value")))
+    (write-value! port 0)
+    (is (= "0" (slurp "/sys/class/gpio/gpio17/value")))))
+
+(deftest test-write-string
+  (spit "/sys/class/gpio/gpio17/value" \0)
+  (let [port (open-port 17)]
+    (write-value! port "1")
+    (is (= "1" (slurp "/sys/class/gpio/gpio17/value")))
+    (write-value! port "0")
+    (is (= "0" (slurp "/sys/class/gpio/gpio17/value")))))
+
+(deftest test-write-boolean
+  (spit "/sys/class/gpio/gpio17/value" \0)
+  (let [port (open-port 17)]
+    (write-value! port true)
+    (is (= "1" (slurp "/sys/class/gpio/gpio17/value")))
+    (write-value! port false)
+    (is (= "0" (slurp "/sys/class/gpio/gpio17/value")))))
+
 (deftest test-set-direction
   (spit "/sys/class/gpio/gpio19/value" \0)
   (let [port (open-port 19)]
