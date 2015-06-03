@@ -1,4 +1,4 @@
-(defproject clj-gpio "0.1.0-SNAPSHOT"
+(defproject clj-gpio "0.1.0T"
     :description "A lightweight Clojure library for Raspberry PI GPIO"
     :url "https://github.com/peterschwarz/clj-gpio"
     :min-lein-version  "2.0.0"
