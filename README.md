@@ -14,26 +14,42 @@ Fire up a REPL, and require `gpio.core`.
 
 ### GPIO Read/Write 
 
-We can open a basic read/write gpio port as follows (let's say we have an LED conncted to GPIO 17):
+We can open a basic read/write gpio port as follows (let's say we have an LED
+conncted to GPIO 17):
 
     user=> (require '[gpio.core :refer :all] :reload)
     nil
     user=> (def port (open-port 17))
     #'user/port
 
+To read the value of the port, we can do the following:
+
+    user=> (read-value port)
+    :low
+
+Or, more conveniently, we can deref it:
+
+    user=> @port
+    :low
+
 To set values on the port, The port needs to be configured for `out` mode:
 
-    user=>(set-direction! port :out)
+    user=> (set-direction! port :out)
 
-This also works with `'out` and `"out"`.  A value can be written to the port as follows:
+This also works with `'out` and `"out"`.  A value can be written to the port
+as follows:
 
-    user=>(write-value! port :high)
+    user=> (write-value! port :high)
 
-With our LED connected to gpio 17, we should see it turned on.
+With our LED connected to gpio 17, we should see it turned on.  We can also
+read back the value and see that `(= :high @port)`.
 
 ### GPIO Listening.
 
-We can also pull events off of a gpio port by using `open-channel-port`.  In addition to setting directions, values etc, we set the edge change that we'll listen for, and we can create a `core.async` channel from which can receive values. 
+We can also pull events off of a gpio port by using `open-channel-port`.  In
+addition to setting directions, values etc, we set the edge change that we'll
+listen for, and we can create a `core.async` channel from which can receive
+values. 
 
 For example (if we have a push button on GPIO 18):
 
@@ -49,13 +65,17 @@ For example (if we have a push button on GPIO 18):
     user=> (set-active-low! ch-port true) 
     nil
 
-Let's turn on the LED we defined in the Read/Write example above when our button is pressed: 
+Let's turn on the LED we defined in the Read/Write example above when our
+button is pressed: 
 
     user=> (def ch (create-edge-channel ch-port))
     #'user/ch
     user=>  (require '[clojure.core.async :as a :refer [go <!]])
     nil
-    user=> (go (loop [] (when-let [value (<! ch)] (write-value! port value) (recur))))
+    user=> (go (loop []
+             (when-let [value (<! ch)]
+                (write-value! port value)
+                (recur))))
     #<ManyToManyChannel clojure.core.async.impl.channels.ManyToManyChannel@1197ad0>
 
 
@@ -78,6 +98,8 @@ First compile the java sources:
     lein javac
 
 then fire up your REPL and require `gpio.core` as usual.
+
+Note, the edge channel will only operate on the Raspberry PI platform.
 
 ## License
 
