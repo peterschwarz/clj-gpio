@@ -2,9 +2,7 @@
   (:require [clojure.core.async :as a 
              :refer [go <! >! >!! chan sliding-buffer tap]]
             [clojure.core.async.impl.protocols :as p])
-  (:import [java.io RandomAccessFile FileOutputStream PrintStream]
-           [java.nio.channels FileChannel FileChannel$MapMode]
-           [io.bicycle.epoll EventPolling EventPoller PollEvent]))
+  (:import [io.bicycle.epoll EventPolling EventPoller PollEvent]))
 
 (defn export! [port]
   (spit "/sys/class/gpio/export" (str port)))
@@ -29,7 +27,7 @@
 
 (defn high-low-value [value]
   {:pre [(not (nil? (#{:high :low 1 0 'high 'low true false "1" "0" \1 \0} value)))]}
-  (byte (condp = value
+  (char (condp = value
           :high \1
           1     \1
           'high \1
@@ -44,7 +42,7 @@
 
 (defn- do-format 
   [raw-value high low]
-  (if (= \1 raw-value) high low))
+  (if (= \1 (first raw-value)) high low))
 
 (defmulti format-raw-digital 
   "Formats the raw values received from digital reads of pin state,
@@ -59,7 +57,7 @@
 
 (defmethod format-raw-digital :boolean
   [_ raw-value]
-  (= \1 raw-value))
+  (= \1 (first raw-value)))
 
 (defmethod format-raw-digital :symbol
   [_ raw-value]
@@ -71,11 +69,11 @@
 
 (defmethod format-raw-digital :char
   [_ raw-value]
-  raw-value)
+  (first raw-value))
 
 (defmethod format-raw-digital :default
   [_ raw-value]
-  raw-value)
+  (first raw-value))
 
 (defprotocol Closeable
   (close! [self] "Closes this object"))
@@ -94,34 +92,28 @@
 (defn- value-file [port]
   (str "/sys/class/gpio/gpio" port "/value"))
 
-(defn random-access [filename]
-  (RandomAccessFile. filename "rw"))
-
-(defrecord BasicGpioPort [port filename file formatter]
+(defrecord BasicGpioPort [port filename formatter]
   GpioPort
 
-  (set-direction! [_ direction]
-    (do-set-direction! port direction))
+  (set-direction! [this direction]
+    (do-set-direction! port direction)
+    this)
 
-  (set-active-low! [_ active-low?]
-    (do-set-active-low! port active-low?))
+  (set-active-low! [this active-low?]
+    (do-set-active-low! port active-low?)
+    this)
 
   (read-value
     [_]
-    (.seek file 0)
-    (formatter (char (.read file))))
+    (formatter (slurp filename)))
 
   (write-value!
-    [_ value]
-    (.seek file 0)
-    (.writeByte file (high-low-value value)))
-
-  clojure.lang.IDeref
-  (deref [this] (read-value this))
+    [this value]
+    (spit filename (high-low-value value))
+    this)
 
   Closeable
   (close! [_]
-    (.close file)
     (unexport! port)))
 
 (defn open-port
@@ -144,13 +136,14 @@
         formatter (or from-raw-fn
                       (partial format-raw-digital digital-result-format))
         filename (value-file port)
-        raf (random-access filename)
-        gpio-port (BasicGpioPort. port filename raf formatter)]
+        gpio-port (BasicGpioPort. port filename formatter)]
+    ; Need to wait for the direction file to be available
+    (Thread/sleep 100)
     (try
-      (when direction (set-direction! gpio-port direction))
-      (when active-low? (set-active-low! gpio-port active-low?))
-      (when initial-value (write-value! gpio-port initial-value))
-      gpio-port
+      (cond-> gpio-port
+        direction (set-direction! direction)
+        active-low? (set-active-low! active-low?)
+        initial-value (write-value! initial-value))
       (catch Exception e
         (close! gpio-port)
         (throw e)))))
@@ -176,21 +169,27 @@
   
   GpioPort
 
-  (set-direction! [_ direction] (set-direction! gpio-port direction))
-  (set-active-low! [_ active-low?] (set-active-low! gpio-port active-low?))
+  (set-direction! [this direction]
+    (set-direction! gpio-port direction)
+    this)
+
+  (set-active-low! [this active-low?]
+    (set-active-low! gpio-port active-low?)
+    this)
+
   (read-value [_] (read-value gpio-port))
 
-  (write-value! [this value] (>!! write-ch value))
+  (write-value! [this value]
+    (>!! write-ch value)
+    this)
 
   GpioChannelProvider
 
-  (set-edge! [_ setting]
-    (do-set-edge! port setting))
+  (set-edge! [this setting]
+    (do-set-edge! port setting)
+    this)
 
   (create-edge-channel [_] (tap-and-wrap-chan mult-ch (chan-factory-fn)))
-
-  clojure.lang.IDeref
-  (deref [this] (read-value this))
 
   Closeable
   (close! [_]
