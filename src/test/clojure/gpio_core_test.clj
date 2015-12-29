@@ -5,20 +5,20 @@
 
 (deftest test-high-low-value
   (testing "high"
-    (is (= (byte \1) (high-low-value :high)))
-    (is (= (byte \1) (high-low-value 'high)))
-    (is (= (byte \1) (high-low-value 1)))
-    (is (= (byte \1) (high-low-value "1")))
-    (is (= (byte \1) (high-low-value \1)))
-    (is (= (byte \1) (high-low-value true))))
+    (is (= \1 (high-low-value :high)))
+    (is (= \1 (high-low-value 'high)))
+    (is (= \1 (high-low-value 1)))
+    (is (= \1 (high-low-value "1")))
+    (is (= \1 (high-low-value \1)))
+    (is (= \1 (high-low-value true))))
 
   (testing "low"
-    (is (= (byte \0) (high-low-value :low)))
-    (is (= (byte \0) (high-low-value 'low)))
-    (is (= (byte \0) (high-low-value 0)))
-    (is (= (byte \0) (high-low-value "0")))
-    (is (= (byte \0) (high-low-value \0)))
-    (is (= (byte \0) (high-low-value false))))
+    (is (= \0 (high-low-value :low)))
+    (is (= \0 (high-low-value 'low)))
+    (is (= \0 (high-low-value 0)))
+    (is (= \0 (high-low-value "0")))
+    (is (= \0 (high-low-value \0)))
+    (is (= \0 (high-low-value false))))
 
   (testing "invalid values"
     (is (thrown? AssertionError (high-low-value 3)))
@@ -71,17 +71,10 @@
 
 (deftest test-read-custom
   (spit "/sys/class/gpio/gpio2/value" \1)
-  (let [port (open-port 2 :from-raw-fn #(if (= \1 %) :foo :bar))]
+  (let [port (open-port 2 :from-raw-fn #(if (= \1 (first %)) :foo :bar))]
     (is (= :foo (read-value port)))
     (write-value! port :low)
     (is (= :bar (read-value port)))))
-
-(deftest test-read-deref
-  (spit "/sys/class/gpio/gpio17/value" \0)
-  (let [port (open-port 17)]
-    (is (= :low @port))
-    (write-value! port :high)
-    (is (= :high  @port))))
 
 (deftest test-write-keyword
   (spit "/sys/class/gpio/gpio17/value" \0)
