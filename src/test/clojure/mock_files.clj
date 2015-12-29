@@ -1,7 +1,6 @@
 (ns mock-files
   (:require [clojure.java.io
-             :refer [file delete-file]]
-            [gpio.core :refer [random-access]]))
+             :refer [file delete-file]]))
 
 (defn delete-recursively  [fname]
     (let [func (fn [func f] 
@@ -23,9 +22,6 @@
 (defn- slurpp [slurp-fn parent filename]
     (slurp-fn (in-parent parent filename)))
 
-(defn- random-accessp [random-access-fn parent filename]
-  (random-access-fn (in-parent parent filename)))
-
 
 (defmacro with-mock-files [& body]
   `(let [test-dir# (file "target/test-files")
@@ -33,11 +29,9 @@
     (assert exists-or-created# "unable to create test directory")
 
     (let [orig-spit# spit
-          orig-slurp# slurp
-          orig-random-access# random-access]
+          orig-slurp# slurp]
       (with-redefs [spit (partial spitp orig-spit# test-dir#)
-                    slurp (partial slurpp orig-slurp# test-dir#)
-                    random-access (partial random-accessp orig-random-access# test-dir#)]
+                    slurp (partial slurpp orig-slurp# test-dir#)]
         ~@body))))
 
 (defn mock-file-fixture [f]
