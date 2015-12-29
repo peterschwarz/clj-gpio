@@ -9,7 +9,7 @@ Pi, in a Clojure REPL-friendly way.
 
 Add the following to your `project.clj`
 
-    [clj-gpio 0.1.1-SNAPSHOT]
+    [clj-gpio 0.2.0-SNAPSHOT]
 
 Fire up a REPL, and require `gpio.core`.
 
@@ -26,11 +26,6 @@ conncted to GPIO 17):
 To read the value of the port, we can do the following:
 
     user=> (read-value port)
-    :low
-
-Or, more conveniently, we can deref it:
-
-    user=> @port
     :low
 
 To set values on the port, The port needs to be configured for `out` mode:
