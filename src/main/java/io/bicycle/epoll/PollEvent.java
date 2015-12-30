@@ -1,6 +1,6 @@
 package io.bicycle.epoll;
 
-import java.io.RandomAccessFile;
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public final class PollEvent {
     private final EventPoller source;
-    private final RandomAccessFile file;
+    private final String filename;
     private final Set<Type> types;
     private final Object data;
 
@@ -72,9 +72,9 @@ public final class PollEvent {
     }
 
 
-    PollEvent(EventPoller source, RandomAccessFile file, Set<Type> types, Object data) {
+    PollEvent(EventPoller source, String filename, Set<Type> types, Object data) {
         this.source = source;
-        this.file = file;
+        this.filename = filename;
         this.types = types;
         this.data = data;
     }
@@ -83,8 +83,8 @@ public final class PollEvent {
         return source;
     }
 
-    public RandomAccessFile getFile() {
-        return file;
+    public String getFilename() {
+        return filename;
     }
 
     public Set<Type> getType() {
@@ -99,7 +99,7 @@ public final class PollEvent {
     public String toString() {
         final StringBuffer sb = new StringBuffer("(EpollEvent. ");
         sb.append(source);
-        sb.append(", ").append(file);
+        sb.append(", ").append(filename);
         sb.append(", #{");
 
         int c = types.size() - 1;

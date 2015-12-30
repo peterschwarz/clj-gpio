@@ -214,7 +214,7 @@
         read-ch (create-channel)
         mult-ch (a/mult read-ch)]
 
-    (.addFile poller (:file gpio-port) POLLING_CONFIG gpio-port)
+    (.addFile poller (:filename gpio-port) POLLING_CONFIG gpio-port)
 
     (when edge (do-set-edge! port edge))
 
