@@ -1,29 +1,34 @@
 (ns gpio.core
-  (:require [clojure.core.async :as a 
-             :refer [go <! >! >!! chan sliding-buffer tap]]
-            [clojure.core.async.impl.protocols :as p])
-  (:import [io.bicycle.epoll EventPolling EventPoller PollEvent]))
+  (:require [gpio.poll :as poll]
+            [gpio.io :refer [write-file read-file]]
+            #?(:clj  [clojure.core.async :as a
+                      :refer [go <! >! >!! chan sliding-buffer tap]]
+               :cljs [cljs.core.async :as a
+                      :refer [<! >! chan sliding-buffer tap]])
+            #?(:clj  [clojure.core.async.impl.protocols :as p]
+               :cljs [cljs.core.async.impl.protocols :as p]))
+  #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]])))
 
 (defn export! [port]
-  (spit "/sys/class/gpio/export" (str port)))
+  (write-file "/sys/class/gpio/export" (str port)))
 
 (defn unexport! [port]
-  (spit "/sys/class/gpio/unexport" (str port)))
+  (write-file "/sys/class/gpio/unexport" (str port)))
 
 (defn- do-set-direction! [port direction]
   {:pre [(some #(= direction %) [:in :out 'in 'out "in" "out"])]}
-  (spit (str "/sys/class/gpio/gpio" port "/direction") (name direction)))
+  (write-file (str "/sys/class/gpio/gpio" port "/direction") (name direction)))
 
 (defn- do-set-edge! [port setting]
   {:pre [(some #(= setting %) [:none, :falling, :rising, :both,
                                'none, 'falling, 'rising, 'both
                                "none", "falling", "rising","both"])]}
 
-  (spit (str "/sys/class/gpio/gpio" port "/edge") (name setting)))
+  (write-file (str "/sys/class/gpio/gpio" port "/edge") (name setting)))
 
 
 (defn- do-set-active-low! [port-num active-low?]
-  (spit (str "/sys/class/gpio/gpio" port-num "/active_low") (if active-low? "1" "0")))
+  (write-file (str "/sys/class/gpio/gpio" port-num "/active_low") (if active-low? "1" "0")))
 
 (defn high-low-value [value]
   {:pre [(not (nil? (#{:high :low 1 0 'high 'low true false "1" "0" \1 \0} value)))]}
@@ -105,11 +110,11 @@
 
   (read-value
     [_]
-    (formatter (slurp filename)))
+    (formatter (read-file filename)))
 
   (write-value!
     [this value]
-    (spit filename (high-low-value value))
+    (write-file filename (high-low-value value))
     this)
 
   Closeable
@@ -138,13 +143,13 @@
         filename (value-file port)
         gpio-port (BasicGpioPort. port filename formatter)]
     ; Need to wait for the direction file to be available
-    (Thread/sleep 100)
+    #?(:clj (Thread/sleep 100))
     (try
       (cond-> gpio-port
         direction (set-direction! direction)
         active-low? (set-active-low! active-low?)
         initial-value (write-value! initial-value))
-      (catch Exception e
+      (catch #?(:clj Exception :cljs :default) e
         (close! gpio-port)
         (throw e)))))
 
@@ -162,8 +167,6 @@
     (p/take! [_ fn1-handler]
       (p/take! out-ch fn1-handler))))
 
-(def ^:private POLLING_CONFIG
-  (bit-or EventPolling/EPOLLIN EventPolling/EPOLLET EventPolling/EPOLLPRI))
 
 (defrecord EdgeGpioPort [port gpio-port event-poller read-ch write-ch mult-ch chan-factory-fn]
   
@@ -180,7 +183,7 @@
   (read-value [_] (read-value gpio-port))
 
   (write-value! [this value]
-    (>!! write-ch value)
+    (a/put! write-ch value)
     this)
 
   GpioChannelProvider
@@ -195,7 +198,7 @@
   (close! [_]
     (a/close! write-ch)
     (a/close! read-ch)
-    (.close event-poller)
+    (poll/cancel-watch event-poller)
     (close! gpio-port)))
 
 (defn open-channel-port
@@ -209,12 +212,10 @@
          :or {event-buffer-size 1, timeout -1}} opts
         create-channel (fn [] (chan (sliding-buffer event-buffer-size)))
         gpio-port (apply open-port port opts)
-        poller (EventPolling/create)
         write-ch (chan 1)
         read-ch (create-channel)
-        mult-ch (a/mult read-ch)]
-
-    (.addFile poller (:file gpio-port) POLLING_CONFIG gpio-port)
+        mult-ch (a/mult read-ch)
+        poller (poll/watch-port gpio-port timeout #(a/put! read-ch (read-value gpio-port))) ]
 
     (when edge (do-set-edge! port edge))
 
@@ -222,12 +223,6 @@
     (go (loop []
           (when-let [data (<! write-ch)]
             (write-value! gpio-port data)
-            (recur))))
-
-    (go (loop []
-          (when-let [events (.poll poller timeout)]
-            (doseq [_ (filter #(=  gpio-port (.getData %)) events)]
-              (>! read-ch (read-value gpio-port)))
             (recur))))
 
     (EdgeGpioPort. port gpio-port poller read-ch write-ch mult-ch create-channel)))
