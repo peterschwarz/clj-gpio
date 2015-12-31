@@ -29,6 +29,7 @@
         ))))
 
 (defn -main [& args]
+  (println "\nRunning CLJS tests...")
   (run-suite))
 
 (set! *main-cli-fn* -main)

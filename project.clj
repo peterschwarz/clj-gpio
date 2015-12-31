@@ -15,5 +15,6 @@
                  [net.java.dev.jna/jna "4.2.1"]]
 
   :aliases {"cljs:test" ["trampoline" "run"  "-m" "clojure.main"
-                         "./scripts/test.clj"]})
+                         "./scripts/test.clj"]
+            "cleantest" ["do" ["clean"] ["test"] ["cljs:test"]]})
 
