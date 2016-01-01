@@ -14,7 +14,7 @@
                  [org.clojure/core.async "0.2.374"]
                  [net.java.dev.jna/jna "4.2.1"]]
 
-  :aliases {"cljs:test" ["trampoline" "run"  "-m" "clojure.main"
-                         "./scripts/test.clj"]
+  :aliases {"cljs:test" ["trampoline" "run"  "-m" "clojure.main" "./scripts/test.clj"]
+            "cljs:repl" ["trampoline" "run"  "-m" "clojure.main" "./scripts/repl.clj"]
             "cleantest" ["do" ["clean"] ["test"] ["cljs:test"]]})
 
