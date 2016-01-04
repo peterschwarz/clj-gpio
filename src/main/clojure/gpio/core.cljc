@@ -86,8 +86,10 @@
 (defprotocol GpioPort
   (set-direction! [port direction] "Sets the direction of this port: in or out.")
   (set-active-low! [port active-low?] "Invert the logic of the value pin for both reading and writing so that a high == 0 and low == 1. ")
-  (read-value [port] "Return the value of the port")
-  (write-value! [port value] "Writes the value to the port.  The value may be specified as `:high`, `:low` (and symbol or string variations), \1, \0, or 1, 0"))
+  (read-value [port] #?(:cljs [port cb])
+              "Return the value of the port")
+  (write-value! [port value] #?(:cljs [port value cb])
+                "Writes the value to the port.  The value may be specified as `:high`, `:low` (and symbol or string variations), \1, \0, or 1, 0"))
 
 (defprotocol GpioChannelProvider
   (set-edge! [providor setting])
@@ -112,10 +114,21 @@
     [_]
     (formatter (read-file filename)))
 
+  #?(:cljs
+      (read-value [_ cb]
+        (read-file filename (fn [err value]
+                              (if err
+                                (cb err nil)
+                                (cb nil (formatter value)))))))
+
   (write-value!
     [this value]
     (write-file filename (high-low-value value))
     this)
+
+  #?(:cljs
+    (write-value! [this value cb]
+      (write-file filename (high-low-value value) #(cb %))))
 
   Closeable
   (close! [_]
@@ -190,9 +203,16 @@
 
   (read-value [_] (read-value gpio-port))
 
+  #?(:cljs
+      (read-value [_ cb] (read-value gpio-port cb)))
+
   (write-value! [this value]
     (a/put! write-ch value)
     this)
+
+  #?(:cljs
+      (write-value! [_ value cb]
+        (a/put! write-ch value cb)))
 
   GpioChannelProvider
 
