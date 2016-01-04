@@ -1,9 +1,13 @@
 package io.bicycle.epoll;
 
-import com.sun.jna.*;
+import com.sun.jna.Native;
+import com.sun.jna.Platform;
+import com.sun.jna.Pointer;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,19 +47,22 @@ public class EventPolling {
 
 
     private static final class FileFDTuple {
-        final RandomAccessFile file;
+        final String filename;
+        final FileInputStream fileInputStream;
         final int fd;
         final NativePollEvent event;
         private  Object data;
 
-        private FileFDTuple(RandomAccessFile file, int fd, NativePollEvent event, Object data) {
-            this.file = file;
+        private FileFDTuple(String filename, FileInputStream fileInputStream, int fd, NativePollEvent event, Object data) {
+            this.filename = filename;
+            this.fileInputStream = fileInputStream;
             this.fd = fd;
             this.event = event;
             this.data = data;
         }
     }
 
+    @SuppressWarnings("Convert2Diamond")
     private static class EventPollerImpl implements EventPoller {
 
         private final int epfd;
@@ -73,13 +80,19 @@ public class EventPolling {
         }
 
         @Override
-        public void addFile(RandomAccessFile file, int flags) {
-            this.addFile(file, flags, null);
+        public void addFile(String filename, int flags) {
+            this.addFile(filename, flags, null);
         }
 
         @Override
-        public void addFile(RandomAccessFile file, int flags, Object data) {
-            int fd = nativeFd(file);
+        public void addFile(String filename, int flags, Object data) {
+            final FileInputStream fileInputStream;
+            try {
+                fileInputStream = new FileInputStream(new File(filename));
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException("Unable to open filename.");
+            }
+            int fd = nativeFd(fileInputStream);
             final NativePollEvent event = new NativePollEvent(flags, new NativePollEventData(fd));
             event.write();
 
@@ -87,17 +100,17 @@ public class EventPolling {
                 throw new RuntimeException("Unable to add to epoll set");
             }
 
-            fileFDTuples.add(new FileFDTuple(file, fd, event, data));
+            fileFDTuples.add(new FileFDTuple(filename, fileInputStream, fd, event, data));
         }
 
         @Override
-        public void modifyFile(RandomAccessFile file, int flags) {
-            modifyFile(file, flags, null);
+        public void modifyFile(String filename, int flags) {
+            modifyFile(filename, flags, null);
         }
 
         @Override
-        public void modifyFile(RandomAccessFile file, int flags, Object data) {
-            final FileFDTuple tuple = tupleFor(file);
+        public void modifyFile(String filename, int flags, Object data) {
+            final FileFDTuple tuple = tupleFor(filename);
             final NativePollEvent event = tuple.event;
             event.events = flags;
             tuple.data = data;
@@ -109,11 +122,16 @@ public class EventPolling {
         }
 
         @Override
-        public void removeFile(RandomAccessFile file) {
-            final FileFDTuple tuple = tupleFor(file);
+        public void removeFile(String filename) {
+            final FileFDTuple tuple = tupleFor(filename);
 
             deregister(tuple);
 
+            try {
+                tuple.fileInputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             fileFDTuples.remove(tuple);
         }
 
@@ -137,7 +155,7 @@ public class EventPolling {
                     // System.out.println(this.events[i]);
                     final FileFDTuple tuple = tupleFor(this.events[i].data.fd);
                     events.add(new PollEvent(this,
-                            tuple != null ? tuple.file : null,
+                            tuple != null ? tuple.filename : null,
                             PollEvent.Type.fromRawType(this.events[0].events),
                             tuple != null ? tuple.data : null));
                 }
@@ -169,25 +187,25 @@ public class EventPolling {
             return null;
         }
 
-        private FileFDTuple tupleFor(RandomAccessFile file) {
-            for (FileFDTuple pair : fileFDTuples) {
-                if (pair.file.equals(file)) {
-                    return pair;
+        private FileFDTuple tupleFor(String filename) {
+            for (FileFDTuple tuple : fileFDTuples) {
+                if (tuple.filename.equals(filename)) {
+                    return tuple;
                 }
             }
 
             throw new RuntimeException("File not already associated with this epoller.");
         }
 
-        private int nativeFd(RandomAccessFile file) {
+        private int nativeFd(FileInputStream fileInputStream) {
             final int fd;
             try {
-                fd = NativeFileUtils.getFileHandle(file.getFD());
+                fd = NativeFileUtils.getFileHandle(fileInputStream.getFD());
             } catch (IOException e) {
-                throw new RuntimeException("Unable to get native file descriptor", e);
+                throw new RuntimeException("Unable to get native fileInputStream descriptor", e);
             }
             if (fd == -1) {
-                throw new RuntimeException("Unable to get native file descriptor");
+                throw new RuntimeException("Unable to get native fileInputStream descriptor");
             }
             return fd;
         }
