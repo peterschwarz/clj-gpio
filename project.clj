@@ -16,5 +16,7 @@
 
   :aliases {"cljs:test" ["trampoline" "run"  "-m" "clojure.main" "./scripts/test.clj"]
             "cljs:repl" ["trampoline" "run"  "-m" "clojure.main" "./scripts/repl.clj"]
+            "cljs:dev" ["trampoline" "run"  "-m" "clojure.main" "./scripts/build.clj"]
+            "cljs:dev:watch" ["trampoline" "run"  "-m" "clojure.main" "./scripts/watch.clj"]
             "cleantest" ["do" ["clean"] ["test"] ["cljs:test"]]})
 
