@@ -121,6 +121,17 @@
   (close! [_]
     (unexport! port)))
 
+(defn- preconfigure [gpio-port opts]
+  (let [{:keys [direction active-low? initial-value]} opts]
+    (try
+      (cond-> gpio-port
+        direction (set-direction! direction)
+        active-low? (set-active-low! active-low?)
+        initial-value (write-value! initial-value))
+      (catch #?(:clj Exception :cljs :default) e
+        (close! gpio-port)
+        (throw e)))))
+
 (defn open-port
   "Opens a port from which values may be read or written.
   Args:
@@ -136,22 +147,19 @@
           Overrides the default formatter"
   [port & opts]
   (export! port)
-  (let [{:keys [digital-result-format from-raw-fn direction active-low? initial-value]
+  (let [{:keys [digital-result-format from-raw-fn]
          :or {digital-result-format :keyword}} opts
         formatter (or from-raw-fn
                       (partial format-raw-digital digital-result-format))
         filename (value-file port)
         gpio-port (BasicGpioPort. port filename formatter)]
     ; Need to wait for the direction file to be available
-    #?(:clj (Thread/sleep 100))
-    (try
-      (cond-> gpio-port
-        direction (set-direction! direction)
-        active-low? (set-active-low! active-low?)
-        initial-value (write-value! initial-value))
-      (catch #?(:clj Exception :cljs :default) e
-        (close! gpio-port)
-        (throw e)))))
+    #?(:clj (do
+              (Thread/sleep 100)
+              (preconfigure gpio-port opts))
+       :cljs (do
+               (js/setTimeout #(preconfigure gpio-port opts) 100)
+               gpio-port))))
 
 (defn- tap-and-wrap-chan [mult-ch out-ch]
   (a/tap mult-ch out-ch)
@@ -217,7 +225,8 @@
         mult-ch (a/mult read-ch)
         poller (poll/watch-port gpio-port timeout #(a/put! read-ch (read-value gpio-port))) ]
 
-    (when edge (do-set-edge! port edge))
+    #?(:clj (when edge (do-set-edge! port edge))
+       :cljs (js/setTimeout #(when edge (do-set-edge! port edge)) 100))
 
     ; Serialize the write loop
     (go (loop []
