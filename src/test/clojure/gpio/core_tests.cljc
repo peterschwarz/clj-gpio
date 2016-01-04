@@ -4,8 +4,8 @@
             [gpio.mock-files :refer [mock-file-fixture]]
             [gpio.io :refer [read-file write-file]]
             [gpio.core :refer [high-low-value
-                               export! unexport!
-                               open-port read-value write-value!
+                               export! unexport! close!
+                               open-port read-value write-value! toggle!
                                set-direction! set-active-low!
                                open-channel-port set-edge!]]))
 
@@ -141,6 +141,25 @@
   (let [port (open-port 21)]
     (set-active-low! port true)
     (is (= "1" (read-file "/sys/class/gpio/gpio21/active_low")))))
+
+(deftest test-toggle
+  (write-file "/sys/class/gpio/gpio21/value" \0)
+  (let [port (open-port 21)]
+    (toggle! port)
+    (is (= "1" (read-file "/sys/class/gpio/gpio21/value")))
+    (toggle! port)
+    (is (= "0" (read-file "/sys/class/gpio/gpio21/value")))))
+
+(deftest test-close!
+  (testing "close GpioPort"
+   (let [port (open-port 21)]
+     (close! port)
+     (is (= "21" (read-file "/sys/class/gpio/unexport")))))
+  
+  #_(testing "close EdgeGpioPort"
+    (let [port (open-channel-port 20)]
+      (close! port)
+     (is (= "20" (read-file "/sys/class/gpio/unexport"))))))
 
 ; Needs a platform-independent method for file watching
 #_(deftest test-open-channel-port

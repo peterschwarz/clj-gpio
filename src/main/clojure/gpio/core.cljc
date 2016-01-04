@@ -87,7 +87,8 @@
   (set-direction! [port direction] "Sets the direction of this port: in or out.")
   (set-active-low! [port active-low?] "Invert the logic of the value pin for both reading and writing so that a high == 0 and low == 1. ")
   (read-value [port] "Return the value of the port")
-  (write-value! [port value] "Writes the value to the port.  The value may be specified as `:high`, `:low` (and symbol or string variations), \1, \0, or 1, 0"))
+  (write-value! [port value] "Writes the value to the port.  The value may be specified as `:high`, `:low` (and symbol or string variations), \1, \0, or 1, 0")
+  (toggle! [port] "Flips the value of the port"))
 
 (defprotocol GpioChannelProvider
   (set-edge! [providor setting])
@@ -116,6 +117,10 @@
     [this value]
     (write-file filename (high-low-value value))
     this)
+
+  (toggle! [this]
+    (let [x (read-file filename)]
+      (write-value! this (do-format x 0 1))))
 
   Closeable
   (close! [_]
@@ -193,6 +198,8 @@
   (write-value! [this value]
     (a/put! write-ch value)
     this)
+
+  (toggle! [_] (toggle! gpio-port))
 
   GpioChannelProvider
 
