@@ -3,13 +3,13 @@
 # clj-gpio
 
 A basic library for reading, writing and watching GPIO signals on a Raspberry
-Pi, in a Clojure REPL-friendly way.
+Pi, in a Clojure REPL-friendly way. Now, also targets ClojureScript.
 
 ## Usage
 
 Add the following to your `project.clj`
 
-    [clj-gpio "0.1.0"]
+    [clj-gpio 0.2.0]
 
 Fire up a REPL, and require `gpio.core`.
 
@@ -28,11 +28,6 @@ To read the value of the port, we can do the following:
     user=> (read-value port)
     :low
 
-Or, more conveniently, we can deref it:
-
-    user=> @port
-    :low
-
 To set values on the port, The port needs to be configured for `out` mode:
 
     user=> (set-direction! port :out)
@@ -44,6 +39,12 @@ as follows:
 
 With our LED connected to gpio 17, we should see it turned on.  We can also
 read back the value and see that `(= :high @port)`.
+
+We can also toggle the state, for convenience:
+
+    user=> (toggle! port)
+
+which will flip the state from `:low` to `:high` or vice versa.
 
 ### GPIO Listening.
 
@@ -57,14 +58,13 @@ For example (if we have a push button on GPIO 18):
     user=> (def ch-port (open-channel-port 18))
     #'user/ch-port
     user=> (set-direction! ch-port :in)
-    nil
+    ...
     user=> (set-edge! ch-port :both) ; or :falling, :rising, and :none to disable 
-    nil
+    ...
 
  We'll also set the bit to :high when the button pressed:
 
     user=> (set-active-low! ch-port true) 
-    nil
 
 Let's turn on the LED we defined in the Read/Write example above when our
 button is pressed: 

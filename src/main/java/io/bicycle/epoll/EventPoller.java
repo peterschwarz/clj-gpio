@@ -10,17 +10,17 @@ import java.util.List;
  */
 public interface EventPoller {
 
-    void addFile(RandomAccessFile file, int flags);
+    void addFile(String filename, int flags);
 
-    void addFile(RandomAccessFile file, int flags, Object data);
+    void addFile(String filename, int flags, Object data);
 
-    void modifyFile(RandomAccessFile file, int flags);
+    void modifyFile(String filename, int flags);
 
-    void modifyFile(RandomAccessFile file, int flags, Object data);
+    void modifyFile(String filename, int flags, Object data);
 
     List<PollEvent> poll(int timeout);
 
-    void removeFile(RandomAccessFile file);
+    void removeFile(String filename);
 
     void close();
 }
