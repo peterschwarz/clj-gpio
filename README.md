@@ -40,6 +40,12 @@ as follows:
 With our LED connected to gpio 17, we should see it turned on.  We can also
 read back the value and see that `(= :high @port)`.
 
+We can also toggle the state, for convenience:
+
+    user=> (toggle! port)
+
+which will flip the state from `:low` to `:high` or vice versa.
+
 ### GPIO Listening.
 
 We can also pull events off of a gpio port by using `open-channel-port`.  In
@@ -52,14 +58,13 @@ For example (if we have a push button on GPIO 18):
     user=> (def ch-port (open-channel-port 18))
     #'user/ch-port
     user=> (set-direction! ch-port :in)
-    nil
+    ...
     user=> (set-edge! ch-port :both) ; or :falling, :rising, and :none to disable 
-    nil
+    ...
 
  We'll also set the bit to :high when the button pressed:
 
     user=> (set-active-low! ch-port true) 
-    nil
 
 Let's turn on the LED we defined in the Read/Write example above when our
 button is pressed: 
