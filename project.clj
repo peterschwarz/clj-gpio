@@ -1,4 +1,4 @@
-(defproject clj-gpio "0.2.0-SNAPSHOT"
+(defproject clj-gpio "0.2.0"
   :description "A lightweight Clojure library for Raspberry PI GPIO"
   :url "http://peterschwarz.github.io/clj-gpio"
   :license  {:name "Eclipse Public License"

@@ -3,13 +3,13 @@
 # clj-gpio
 
 A basic library for reading, writing and watching GPIO signals on a Raspberry
-Pi, in a Clojure REPL-friendly way.
+Pi, in a Clojure REPL-friendly way. Now, also targets ClojureScript.
 
 ## Usage
 
 Add the following to your `project.clj`
 
-    [clj-gpio 0.2.0-SNAPSHOT]
+    [clj-gpio 0.2.0]
 
 Fire up a REPL, and require `gpio.core`.
 
