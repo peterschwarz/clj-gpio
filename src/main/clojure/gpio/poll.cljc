@@ -18,9 +18,11 @@
         (when-let [events (.poll poller timeout)]
           (doseq [_ (filter #(= port (.getData %)) events)]
             (on-change-fn))
-          (recur)))))
+          (recur)))
 
-  (defn cancel-watch [poller]
+      poller))
+
+  (defn cancel-watch [^EventPoller poller]
     (.close poller))
        
 )
